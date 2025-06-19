@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Gasóleo Mais Barato</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #333;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align:left; font-size: 22px; margin-bottom: 10px;">Resultados</h1>
+    <table>
+        <tr>
+            <th>Posto</th>
+            <th>Marca</th>
+            <th>Preço (€)</th>
+            <th>Localidade</th>
+        </tr>
+        {% for posto in postos %}
+        <tr>
+            <td>{{ posto.Posto }}</td>
+            <td>{{ posto.Marca }}</td>
+            <td>{{ posto["Preço (€)"] }}</td>
+            <td>{{ posto.Localidade }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
