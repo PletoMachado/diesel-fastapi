@@ -3,6 +3,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 import requests
 
+
 app = FastAPI()
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -15,31 +16,28 @@ def home():
 @app.get("/barato", response_class=HTMLResponse)
 def mais_barato(request: Request):
     url = "https://precoscombustiveis.dgeg.gov.pt/api/PrecoComb/PesquisarPostos"
-    params = {
-        "idsTiposComb": 3201,
-        "qtdPorPagina": 50,
-        "pagina": 1
-    }
+    params = {"idsTiposComb": 3201, "qtdPorPagina": 50, "pagina": 1}
 
-    response = requests.get(url, params=params)
-    data = response.json().get("resultado", [])
+    resp = requests.get(url, params=params, verify=False)
+    data = resp.json().get("resultado", [])
 
-    postos_formatados = []
-    for posto in data:
+    postos = []
+    for p in data:
         try:
-            preco_float = float(posto["Preco"].replace(",", ".").split()[0])
-            postos_formatados.append({
-                "Posto": posto["Nome"].strip(),
-                "Marca": posto["Marca"].strip(),
-                "Preço (€)": f"{preco_float:.3f}",
-                "Localidade": posto["Morada"].strip().replace("\r", " ")
+            preco = float(p["Preco"].replace(",", ".").split()[0])
+            postos.append({
+                "Posto":       p["Nome"].strip(),
+                "Marca":       p["Marca"].strip(),
+                "Preco":       f"{preco:.3f}",
+                "Localidade":  p["Morada"].strip().replace("\r"," "),
+                "Lat":         round(p["Latitude"], 6),
+                "Lng":         round(p["Longitude"], 6),
             })
         except:
             continue
 
-    postos_ordenados = sorted(postos_formatados, key=lambda x: float(x["Preço (€)"]))
-
+    postos = sorted(postos, key=lambda x: float(x["Preco"]))[:5]
     return templates.TemplateResponse("barato.html", {
         "request": request,
-        "postos": postos_ordenados[:5]
+        "postos":  postos
     })

@@ -1,55 +1,101 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <title>Gasóleo Mais Barato</title>
-    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 2rem;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            text-align: center;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        th, td {
-            padding: 12px;
-            border: 1px solid #ccc;
-            text-align: left;
-        }
-        th {
-            background-color: #333;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Gasóleo Mais Barato</title>
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    body, html { margin:0; padding:0; height:100%; }
+    #map { width:100%; height:100%; }
+    .leaflet-popup-content-wrapper { font-size:14px; }
+    #loading {
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      background:rgba(255,255,255,0.9);
+      padding:1rem 2rem; border-radius:8px;
+      font-size:1.2rem; text-align:center;
+    }
+  </style>
 </head>
 <body>
-    <h1 style="text-align:left; font-size: 22px; margin-bottom: 10px;">Resultados</h1>
-    <table>
-        <tr>
-            <th>Posto</th>
-            <th>Marca</th>
-            <th>Preço (€)</th>
-            <th>Localidade</th>
-        </tr>
-        {% for posto in postos %}
-        <tr>
-            <td>{{ posto.Posto }}</td>
-            <td>{{ posto.Marca }}</td>
-            <td>{{ posto["Preço (€)"] }}</td>
-            <td>{{ posto.Localidade }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+  <div id="map"></div>
+  <div id="loading">A obter a tua localização…</div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const postos = {{ postos | tojson }};
+    const maxDist = 10; // km
+
+    // Haversine
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2-lat1)*Math.PI/180;
+      const dLon = (lon2-lon1)*Math.PI/180;
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(lat1*Math.PI/180)*
+                Math.cos(lat2*Math.PI/180)*
+                Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // Inicia somente depois de obter posição
+    navigator.geolocation.getCurrentPosition(pos => {
+  // teu código
+}, err => {
+  document.getElementById('loading').textContent =
+    'Não foi possível obter localização.';
+  console.error(err);
+}, {
+  enableHighAccuracy: true,
+  timeout: 10000,
+  maximumAge: 0
+});
+
+      const userLat = pos.coords.latitude;
+      const userLng = pos.coords.longitude;
+
+      // filtra por distância
+      const nearby = postos.filter(p =>
+        getDistance(userLat,userLng,p.Lat,p.Lng) <= maxDist
+      );
+
+      // remove loading
+      document.getElementById('loading').remove();
+
+      // inicializa o mapa centrado em ti
+      const map = L.map('map').setView([userLat, userLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      // marcador da tua posição
+      L.circleMarker([userLat,userLng], {
+        radius:8, color:'#007bff', fillColor:'#007bff', fillOpacity:0.7
+      }).addTo(map).bindPopup('Tu estás aqui').openPopup();
+
+      // marca os postos perto de ti
+      nearby.forEach(p => {
+        L.marker([p.Lat, p.Lng])
+         .addTo(map)
+         .bindPopup(
+           `<b>${p.Posto}</b><br>
+            Marca: ${p.Marca}<br>
+            Preço: €${p.Preco}<br>
+            ${p.Localidade}`
+         );
+      });
+
+      if(nearby.length===0) {
+        alert(`Nenhum posto dentro de ${maxDist} km.`);
+      }
+    }, err => {
+      document.getElementById('loading').textContent =
+        'Não foi possível obter localização.';
+      console.error(err);
+    });
+  </script>
 </body>
 </html>
